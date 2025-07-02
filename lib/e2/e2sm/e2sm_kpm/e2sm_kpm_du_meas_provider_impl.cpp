@@ -314,14 +314,35 @@ bool e2sm_kpm_du_meas_provider_impl::get_cqi(const asn1::e2sm::label_info_list_l
   if (last_ue_metrics.empty()) {
     return handle_no_meas_data_available(ues, items, asn1::e2sm::meas_record_item_c::types::options::integer);
   }
-  scheduler_ue_metrics ue_metrics = last_ue_metrics[0];
-
-  meas_record_item_c meas_record_item;
-  meas_record_item.set_integer() = ue_metrics.cqi_stats.get_nof_observations() > 0
-                                       ? static_cast<uint64_t>(std::roundf(ue_metrics.cqi_stats.get_mean()))
-                                       : 0;
-  items.push_back(meas_record_item);
-  meas_collected = true;
+  if (ues.empty()) {
+    // Report mean CQI across all UEs
+    double sum_cqi = 0;
+    int count = 0;
+    for (const auto& ue_metrics : last_ue_metrics) {
+      if (ue_metrics.cqi_stats.get_nof_observations() > 0) {
+        sum_cqi += ue_metrics.cqi_stats.get_mean();
+        count++;
+      }
+    }
+    meas_record_item_c meas_record_item;
+    meas_record_item.set_integer() = (count > 0) ? static_cast<uint64_t>(std::round(sum_cqi / count)) : 0;
+    items.push_back(meas_record_item);
+    meas_collected = true;
+  } else {
+    // Report CQI for each UE in the list
+    for (const auto& ue : ues) {
+      gnb_cu_ue_f1ap_id_t gnb_cu_ue_f1ap_id = int_to_gnb_cu_ue_f1ap_id(ue.gnb_du_ue_id().gnb_cu_ue_f1ap_id);
+      uint32_t ue_idx = f1ap_ue_id_provider.get_ue_index(gnb_cu_ue_f1ap_id);
+      meas_record_item_c meas_record_item;
+      if (ue_idx < last_ue_metrics.size() && last_ue_metrics[ue_idx].cqi_stats.get_nof_observations() > 0) {
+        meas_record_item.set_integer() = static_cast<uint64_t>(std::roundf(last_ue_metrics[ue_idx].cqi_stats.get_mean()));
+      } else {
+        meas_record_item.set_integer() = 0;
+      }
+      items.push_back(meas_record_item);
+      meas_collected = true;
+    }
+  }
 
   return meas_collected;
 }
@@ -335,12 +356,34 @@ bool e2sm_kpm_du_meas_provider_impl::get_rsrp(const asn1::e2sm::label_info_list_
   if (last_ue_metrics.empty()) {
     return handle_no_meas_data_available(ues, items, asn1::e2sm::meas_record_item_c::types::options::integer);
   }
-  scheduler_ue_metrics ue_metrics = last_ue_metrics[0];
 
-  meas_record_item_c meas_record_item;
-  meas_record_item.set_integer() = (int)ue_metrics.pusch_snr_db;
-  items.push_back(meas_record_item);
-  meas_collected = true;
+  if (ues.empty()) {
+    // Report mean RSRP across all UEs (here using pusch_snr_db as placeholder)
+    double sum_rsrp = 0;
+    int count = 0;
+    for (const auto& ue_metrics : last_ue_metrics) {
+      sum_rsrp += ue_metrics.pusch_snr_db;
+      count++;
+    }
+    meas_record_item_c meas_record_item;
+    meas_record_item.set_integer() = (count > 0) ? static_cast<int>(std::round(sum_rsrp / count)) : 0;
+    items.push_back(meas_record_item);
+    meas_collected = true;
+  } else {
+    // Report RSRP for each UE in the list
+    for (const auto& ue : ues) {
+      gnb_cu_ue_f1ap_id_t gnb_cu_ue_f1ap_id = int_to_gnb_cu_ue_f1ap_id(ue.gnb_du_ue_id().gnb_cu_ue_f1ap_id);
+      uint32_t ue_idx = f1ap_ue_id_provider.get_ue_index(gnb_cu_ue_f1ap_id);
+      meas_record_item_c meas_record_item;
+      if (ue_idx < last_ue_metrics.size()) {
+        meas_record_item.set_integer() = static_cast<int>(last_ue_metrics[ue_idx].pusch_snr_db);
+      } else {
+        meas_record_item.set_integer() = 0;
+      }
+      items.push_back(meas_record_item);
+      meas_collected = true;
+    }
+  }
 
   return meas_collected;
 }
@@ -354,12 +397,34 @@ bool e2sm_kpm_du_meas_provider_impl::get_rsrq(const asn1::e2sm::label_info_list_
   if (last_ue_metrics.empty()) {
     return handle_no_meas_data_available(ues, items, asn1::e2sm::meas_record_item_c::types::options::integer);
   }
-  scheduler_ue_metrics ue_metrics = last_ue_metrics[0];
 
-  meas_record_item_c meas_record_item;
-  meas_record_item.set_integer() = (int)ue_metrics.pusch_snr_db;
-  items.push_back(meas_record_item);
-  meas_collected = true;
+  if (ues.empty()) {
+    // Report mean RSRQ across all UEs (here using pusch_snr_db as placeholder)
+    double sum_rsrq = 0;
+    int count = 0;
+    for (const auto& ue_metrics : last_ue_metrics) {
+      sum_rsrq += ue_metrics.pusch_snr_db;
+      count++;
+    }
+    meas_record_item_c meas_record_item;
+    meas_record_item.set_integer() = (count > 0) ? static_cast<int>(std::round(sum_rsrq / count)) : 0;
+    items.push_back(meas_record_item);
+    meas_collected = true;
+  } else {
+    // Report RSRQ for each UE in the list
+    for (const auto& ue : ues) {
+      gnb_cu_ue_f1ap_id_t gnb_cu_ue_f1ap_id = int_to_gnb_cu_ue_f1ap_id(ue.gnb_du_ue_id().gnb_cu_ue_f1ap_id);
+      uint32_t ue_idx = f1ap_ue_id_provider.get_ue_index(gnb_cu_ue_f1ap_id);
+      meas_record_item_c meas_record_item;
+      if (ue_idx < last_ue_metrics.size()) {
+        meas_record_item.set_integer() = static_cast<int>(last_ue_metrics[ue_idx].pusch_snr_db);
+      } else {
+        meas_record_item.set_integer() = 0;
+      }
+      items.push_back(meas_record_item);
+      meas_collected = true;
+    }
+  }
 
   return meas_collected;
 }
